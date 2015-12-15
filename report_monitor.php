@@ -4,41 +4,13 @@ date_default_timezone_set('PRC');
 $date = date("Y-m-d H:i:s");
 //选择数据库连接
 $db_link = mysql_connect($db_host, $db_user, $db_pass);// or die(message(mysql_error()));
-
+$session = get_session(6);
 //选择数据库
 mysql_select_db($db_name, $db_link);// or die(message(mysql_error()));
 
 //转换本地时间
 $check_date = strtotime (date ("H:i:s"));
 
-//检查报警信息
-/*
-$sql_report =  "select * FROM `m_sub` where CHECK_STATUS = 'normal'";
-$result = mysql_query($sql_report, $db_link);
-while ($row = mysql_fetch_array($result)){
-
-	$failes_report_host = $row['HOSTNAME']."";
-	$failes_report_time = $row['UP_TIME']."";
-	//print "cc $failes_report_host\n";
-	
-	$sql_report_status = "select * FROM m_use WHERE HOSTNAME LIKE '%$failes_report_host%'";
-	$result_status = mysql_query($sql_report_status, $db_link);
-	//print "$sql_report_status";
-
-	//获取use状态信息
-	while ($row1 = mysql_fetch_array($result_status)){
-		$report_status = $row1['STATUS']."";
-		//print "$report_status\n";
-		//判定use状态信息是否为STOP
-		if ($report_status = OK){
-
-			//print "-------- $failes_report_host\n";
-			//将结果交给report.php处理
-
-		}
-	}
-}
-*/
 //检查报警信息
 $sql_report_use =  "select * FROM `m_use` where STATUS = 'OK'";
 $result_use = mysql_query($sql_report_use, $db_link);
@@ -57,7 +29,7 @@ $static = ceil($check_date-$last_up_time);
 //print "$use_report_host $static static\n";
 
 //检查客户端是否中断更新时间
-if($static > 70){
+if($static > 75){
 	$report_monitor = "select * FROM m_report where HOSTNAME = '$use_report_host'";
 	$result_monitor = mysql_query($report_monitor,$db_link);
 	$row_monitor_status = mysql_fetch_array($result_monitor);
@@ -67,7 +39,7 @@ if($static > 70){
 	//判定更新状态是否是down
 	if ($report_monitor_status != DOWN){
 		//更新down的状态到report的数据库
-		$sql_report_monitor = "insert into m_report (HOSTNAME,REPORT_STATUS,UP_TIME) values ('$use_report_host','DOWN','$date') on duplicate key update HOSTNAME='$use_report_host',REPORT_STATUS='DOWN',UP_TIME='$date'";
+		$sql_report_monitor = "insert into m_report (HOSTNAME,REPORT_STATUS,UP_TIME,CONTROL,SESSION) values ('$use_report_host','DOWN','$date','OK','$session') on duplicate key update HOSTNAME='$use_report_host',REPORT_STATUS='DOWN',UP_TIME='$date',SESSION='$session'";
 		$result_report_monitor = mysql_query($sql_report_monitor,$db_link);
 		}	
 	}else { 	
@@ -120,6 +92,18 @@ if($static > 70){
 	}
    }
 //关闭数据库
+}
+function get_session( $length = 8 ) {
+    // 密码字符集
+    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+    $p_session = '';
+    for ( $i = 0; $i < $length; $i++ )
+    {
+        $p_session .= $chars[ mt_rand(0, strlen($chars) - 1) ];
+    }
+
+    return $p_session;
 }
 mysql_close($db_link);
 ?>
